@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Journal & To-Do List</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .message-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .message-box.show {
+            opacity: 1;
+        }
+        .message-box.error {
+            background-color: #f44336; /* Red */
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            pointer-events: none; /* Allows interaction beneath */
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .loading-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-start justify-center p-4 sm:p-6 lg:p-8">
+
+    <div class="container w-full">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Daily Journal & To-Do List</h1>
+        <p class="text-sm text-gray-600 mb-4 text-center">
+            Your User ID: <span id="userIdDisplay" class="font-semibold text-blue-600">Loading...</span>
+        </p>
+
+        <!-- Date Picker -->
+        <div class="mb-6">
+            <label for="entryDate" class="block text-gray-700 text-sm font-medium mb-2">Select Date:</label>
+            <input type="date" id="entryDate"
+                   class="shadow-sm appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"
+                   onchange="loadDailyEntry()">
+        </div>
+
+        <!-- Journal Sections -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Academics / Hard Skills -->
+            <div>
+                <label for="academics" class="block text-gray-700 text-base font-medium mb-2">Academics / Hard Skills:</label>
+                <textarea id="academics" placeholder="e.g., Studied Calculus, Practiced Python coding..."
+                          class="shadow-sm appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"></textarea>
+            </div>
+
+            <!-- Communication / Soft Skills -->
+            <div>
+                <label for="communication" class="block text-gray-700 text-base font-medium mb-2">Communication / Soft Skills:</label>
+                <textarea id="communication" placeholder="e.g., Prepared for presentation, Active listening during meeting..."
+                          class="shadow-sm appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"></textarea>
+            </div>
+
+            <!-- Workout / Physical Activity -->
+            <div>
+                <label for="workout" class="block text-gray-700 text-base font-medium mb-2">Workout / Physical Activity:</label>
+                <textarea id="workout" placeholder="e.g., 30 mins cardio, Strength training..."
+                          class="shadow-sm appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"></textarea>
+            </div>
+
+            <!-- Journaling / Learnings -->
+            <div>
+                <label for="journaling" class="block text-gray-700 text-base font-medium mb-2">Journaling / Learnings:</label>
+                <textarea id="journaling" placeholder="e.g., Key takeaways from 'Atomic Habits', Reflected on daily goals..."
+                          class="shadow-sm appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"></textarea>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="text-center">
+            <button id="saveButton"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Save Daily Entry
+            </button>
+            <button id="clearButton"
+                    class="ml-4 bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                Clear Form
+            </button>
+        </div>
+    </div>
+
+    <!-- Message Box -->
+    <div id="messageBox" class="message-box"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, Timestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables for Firebase (provided by the Canvas environment)
+        // Ensure these are accessed safely
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let currentUserId = null;
+        let currentEntryDate = ''; // YYYY-MM-DD format
+
+        // Get DOM elements
+        const entryDateInput = document.getElementById('entryDate');
+        const academicsTextarea = document.getElementById('academics');
+        const communicationTextarea = document.getElementById('communication');
+        const workoutTextarea = document.getElementById('workout');
+        const journalingTextarea = document.getElementById('journaling');
+        const saveButton = document.getElementById('saveButton');
+        const clearButton = document.getElementById('clearButton');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const messageBox = document.getElementById('messageBox');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        /**
+         * Displays a temporary message to the user.
+         * @param {string} message The message to display.
+         * @param {boolean} isError True if it's an error message, false for success/info.
+         */
+        function showMessage(message, isError = false) {
+            messageBox.textContent = message;
+            messageBox.className = 'message-box show ' + (isError ? 'error' : '');
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000); // Message disappears after 3 seconds
+        }
+
+        /**
+         * Shows or hides the loading overlay.
+         * @param {boolean} show True to show, false to hide.
+         */
+        function showLoading(show) {
+            if (show) {
+                loadingOverlay.classList.add('show');
+            } else {
+                loadingOverlay.classList.remove('show');
+            }
+        }
+
+        /**
+         * Clears all textarea fields.
+         */
+        function clearForm() {
+            academicsTextarea.value = '';
+            communicationTextarea.value = '';
+            workoutTextarea.value = '';
+            journalingTextarea.value = '';
+        }
+
+        /**
+         * Populates textarea fields with data from an entry.
+         * @param {Object} entryData The journal entry data.
+         */
+        function populateForm(entryData) {
+            academicsTextarea.value = entryData.academics || '';
+            communicationTextarea.value = entryData.communication || '';
+            workoutTextarea.value = entryData.workout || '';
+            journalingTextarea.value = entryData.journaling || '';
+        }
+
+        /**
+         * Saves or updates the daily journal entry in Firestore.
+         */
+        async function saveDailyEntry() {
+            if (!currentUserId || !currentEntryDate) {
+                showMessage("Please select a date and ensure you are logged in.", true);
+                return;
+            }
+
+            showLoading(true);
+            try {
+                // Get the document reference for the specific date and user
+                const entryDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/dailyJournalEntries`, currentEntryDate);
+
+                // Create the data object from form inputs
+                const entryData = {
+                    userId: currentUserId,
+                    date: currentEntryDate,
+                    academics: academicsTextarea.value,
+                    communication: communicationTextarea.value,
+                    workout: workoutTextarea.value,
+                    journaling: journalingTextarea.value,
+                    updatedAt: Timestamp.now()
+                };
+
+                // Check if the document exists to determine if it's an update or new creation
+                const docSnap = await getDoc(entryDocRef);
+                if (!docSnap.exists()) {
+                    // Add createdAt only for new documents
+                    entryData.createdAt = Timestamp.now();
+                }
+
+                // Set the document data (setDoc replaces or creates)
+                await setDoc(entryDocRef, entryData, { merge: true }); // Use merge: true to update existing fields without overwriting others
+
+                showMessage("Entry saved successfully!");
+            } catch (error) {
+                console.error("Error saving entry:", error);
+                showMessage("Error saving entry: " + error.message, true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        /**
+         * Loads the daily entry for the currently selected date.
+         */
+        async function loadDailyEntry() {
+            currentEntryDate = entryDateInput.value;
+            if (!currentUserId || !currentEntryDate) {
+                clearForm();
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const entryDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/dailyJournalEntries`, currentEntryDate);
+
+                // Use onSnapshot for real-time updates to the current day's entry
+                // This listener will automatically update the form if the data changes in Firestore
+                onSnapshot(entryDocRef, (docSnap) => {
+                    showLoading(false); // Hide loading once data is received
+                    if (docSnap.exists()) {
+                        populateForm(docSnap.data());
+                        showMessage(`Entry for ${currentEntryDate} loaded.`);
+                    } else {
+                        clearForm();
+                        showMessage(`No entry found for ${currentEntryDate}. Start a new one!`, false);
+                    }
+                }, (error) => {
+                    console.error("Error fetching real-time entry:", error);
+                    showMessage("Error loading entry: " + error.message, true);
+                    showLoading(false);
+                });
+
+            } catch (error) {
+                console.error("Error setting up entry listener:", error);
+                showMessage("Error loading entry: " + error.message, true);
+                showLoading(false);
+            }
+        }
+
+        /**
+         * Initializes Firebase and sets up authentication.
+         */
+        async function initializeFirebase() {
+            try {
+                // Initialize Firebase app if not already initialized
+                if (!app) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                }
+
+                // Authenticate user
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Set up auth state change listener
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        userIdDisplay.textContent = currentUserId;
+                        // Once authenticated, set today's date and load any existing entry
+                        const today = new Date();
+                        entryDateInput.value = today.toISOString().split('T')[0]; // Set default to today
+                        loadDailyEntry(); // Load entry for today's date
+                    } else {
+                        currentUserId = null;
+                        userIdDisplay.textContent = 'Not authenticated';
+                        clearForm();
+                        showMessage("Not authenticated. Please try refreshing.", true);
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization or authentication error:", error);
+                showMessage("Failed to initialize app. Please check console.", true);
+            }
+        }
+
+        // --- Event Listeners ---
+        saveButton.addEventListener('click', saveDailyEntry);
+        clearButton.addEventListener('click', clearForm);
+
+        // Initialize Firebase when the window loads
+        window.onload = initializeFirebase;
+
+    </script>
+</body>
+</html>
